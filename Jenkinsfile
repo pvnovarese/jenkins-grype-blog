@@ -4,9 +4,10 @@ pipeline {
     REGISTRY = 'registry.hub.docker.com'
     // change this CREDENTIAL to the ID of whatever jenkins credential has your registry user/pass
     CREDENTIAL = 'docker-hub'
+    // set USER to your docker hub ID (or user for proviate registry)
     USER = 'pvnovarese'
-    // change repository to your DockerID
-    REPOSITORY = 'pvnovarese/jenkins-grype-blog'
+    // you probably don't need to change this
+    REPOSITORY = 'jenkins-grype-blog'
   }
   agent any
   stages {
@@ -35,7 +36,7 @@ pipeline {
         // the command succeed since dvwa doesn't (as of today) have any 
         // critical vulns in it, just a bunch of highs
         //
-        sh 'set -o pipefail ; /var/jenkins_home/grype -f high -q -o json ${USER}/${REPOSITORY}:${BUILD_NUMBER} | jq .matches[].vulnerability.severity | sort | uniq -c'
+        sh 'set -o pipefail ; /var/jenkins_home/grype -f critical -q -o json ${USER}/${REPOSITORY}:${BUILD_NUMBER} | jq .matches[].vulnerability.severity | sort | uniq -c'
       }
     }
     stage('Re-tag as prod and push stable image to registry') {
