@@ -36,11 +36,13 @@ pipeline {
         // the command succeed since dvwa doesn't (as of today) have any 
         // critical vulns in it, just a bunch of highs
         //
-        sh 'set -o pipefail ;
-            /var/jenkins_home/grype -f critical -q -o json ${USER}/${REPOSITORY}:${BUILD_NUMBER} | 
-            jq .matches[].vulnerability.severity | 
-            sort | 
-            uniq -c'
+        sh '''
+          set -o pipefail ;
+          /var/jenkins_home/grype -f critical -q -o json ${USER}/${REPOSITORY}:${BUILD_NUMBER} | 
+          jq .matches[].vulnerability.severity | 
+          sort | 
+          uniq -c
+        '''
       }
     }
     stage('Re-tag as prod and push stable image to registry') {
