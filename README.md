@@ -21,7 +21,7 @@ Once Jenkins is up and running, we have just a few things to configure:
 - Create a credential so we can push images into Docker Hub:
 	- go to manage jenkins -> manage credentials
 	- click “global” and “add credentials”
-	- Use your Docker Hub username and password (get an access token from Docker Hub if you are using multifactor authentication), and set the ID of the credential to “Docker Hub”.
+	- Use your Docker Hub username and password (get an access token from Docker Hub if you are using multifactor authentication), and set the ID of the credential to “docker-hub”.
 
 ## Part 2: Get Grype
 We can download the binaries directly into our bind mount directory we created we spun up the jenkins container:
@@ -31,24 +31,36 @@ We can download the binaries directly into our bind mount directory we created w
 ## Part 3: Check for CVEs with Grype
 
 - Fork this repo
-- In the Jenkinsfile, change this line, replacing “pvnovarese” with your Docker ID:
-	`repository = 'pvnovarese/jenkins-grype-demo'`
+- In the Jenkinsfile, change the variables in the "environment" section at the top as needed (most likely you should only need to change the USER variable from 'pvnovarese' to whatever your DockerID is).
 - From the jenkins main page, select “New Item” 
-- Name it “jenkins-grype-demo”
+- Name it “grype-blog” or similar
 - Choose “pipeline” and click “OK”
 - On the configuration page, scroll down to “Pipeline”
 - For “Definition,” select “Pipeline script from SCM”
 - For “SCM,” select “git”
 - For “Repository URL,” paste in the URL of your forked github repo
-	e.g. https://github.com/pvnovarese/jenkins-grype-demo (use your github username)
+	e.g. https://github.com/pvnovarese/jenkins-grype-blog (use your github username)
 - Click “Save”
 - You’ll now be at the top-level project page.  Click “Build Now”
 
-Jenkins will check out the repo and build an image using the provided Dockerfile.  This image will be a simple copy of dvwa (dang vulnerable web app), which is an example app that is full of known vulnerabilities.  Once the image is built, Jenkins will call grype and then grep through the output to search for High and Critical issues.  This should cause the pipeline to fail at the “Analyze with grype” stage.
+Jenkins will check out the repo and build an image using the provided Dockerfile.  This image will be a simple copy of dvwa (dang vulnerable web app), which is an example app full of known vulnerabilities.  Once the image is built, Jenkins will call grype and then grep through the output to search for vulnerabilities with High or Critical severity.  This should cause the pipeline to fail at the “Analyze with grype” stage.
 
-You can check the console output for the build if you want to see where the failure occurs.
+You can check the console output for the build if you want to see where the failure occurs, which will look something like this:
 
-If you’d like to see a successful build, go to the github repo, edit the Dockerfile, and change the FROM image from dvwa to something like alpine:latest, then go back to the Jenkins project page and click “Build now” again. This time, once the image passes our grype check, jenkins will rebuild the image, using the “prod” tag this time, and push it to Docker Hub using the credentials you provided.
+```
++ set -o pipefail
++ uniq -c
++ /var/jenkins_home/grype -f high -q -o json pvnovarese/pvnovarese/jenkins-grype-blog:1
++ jq '.matches[].vulnerability.severity'
++ sort
+discovered vulnerabilities at or above the severity threshold
+    193 "High"
+    168 "Low"
+    947 "Medium"
+    519 "Negligible"
+```
+
+We will never be able to fix all of the problems in dvwa, but if you’d like to see a successful build, go to the github repo, edit the Jenkinsfile, and in the "Analyze with grype" stage simply change the failure threshold from "high" to "critical," then go back to the Jenkins project page and click “Build now” again. This time, once the image passes our grype check, jenkins will re-tag the image, using the “prod” tag this time, and push it to Docker Hub using the credentials you provided.
 
 ## Part 4: Package Stoplist with Syft (optional)
 There is a companion repo and demo for Anchore Syft here: https://github.com/pvnovarese/jenkins-syft-demo
@@ -61,5 +73,5 @@ There is a companion repo and demo for Anchore Syft here: https://github.com/pvn
 - Remove the jenkins-data directory from /tmp
 	`pvn@gyarados /home/pvn> sudo rm -rf /tmp/jenkins-data/`
 - Remove all demo images from your local machine:
-	`pvn@gyarados /home/pvn> docker image ls | grep -E "jenkins-grype-demo|jenkins-syft-demo" | awk '{print $3}' | xargs docker image rm -f`
+	`pvn@gyarados /home/pvn> docker image ls | grep -E "jenkins-grype|jenkins-syft" | awk '{print $3}' | xargs docker image rm -f`
 
