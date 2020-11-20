@@ -4,7 +4,7 @@ pipeline {
     REGISTRY = 'registry.hub.docker.com'
     // change this CREDENTIAL to the ID of whatever jenkins credential has your registry user/pass
     CREDENTIAL = 'docker-hub'
-    USER = pvnovarese
+    USER = 'pvnovarese'
     // change repository to your DockerID
     REPOSITORY = 'pvnovarese/jenkins-grype-blog'
   }
